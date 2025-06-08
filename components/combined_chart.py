@@ -32,6 +32,7 @@ def render_combined_chart(ticker):
         return
 
     hist.reset_index(inplace=True)
+    hist.rename(columns={"Datetime": "Date"}, inplace=True)
     hist["SMA_50"] = hist["Close"].rolling(window=50).mean()
     hist["SMA_200"] = hist["Close"].rolling(window=200).mean()
     fig = go.Figure()
