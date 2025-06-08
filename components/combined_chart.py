@@ -87,7 +87,8 @@ def render_combined_chart(ticker):
                     break
 
             if eps_column is None:
-                raise ValueError("EPS data (basic or diluted) not found in income statement.")
+                st.warning(f"No EPS data found (basic or diluted) for {ticker}. PE Ratio chart is unavailable.")
+                return
 
             eps_df = income_stmt[['asOfDate', eps_column]].dropna()
             eps_df.columns = ['Date', 'EPS']
