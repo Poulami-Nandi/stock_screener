@@ -79,7 +79,17 @@ def render_combined_chart(ticker):
             else:
                 income_stmt = income_stmt_raw
 
-            eps_df = income_stmt[['asOfDate', 'epsBasic']].dropna()
+            # Safely select available EPS column
+            eps_column = None
+            for col in ['epsBasic', 'epsDiluted']:
+                if col in income_stmt.columns:
+                    eps_column = col
+                    break
+
+            if eps_column is None:
+                raise ValueError("EPS data (basic or diluted) not found in income statement.")
+
+            eps_df = income_stmt[['asOfDate', eps_column]].dropna()
             eps_df.columns = ['Date', 'EPS']
             eps_df["Date"] = pd.to_datetime(eps_df["Date"])
             eps_df = eps_df.sort_values("Date")
@@ -126,7 +136,7 @@ def render_combined_chart(ticker):
             yaxis2=dict(title="PE", overlaying="y", side="right", showgrid=False)
         )
 
-    # === X-axis cleanup ===
+    # === X-axis configuration ===
     xaxis_config = dict(title="Date", showgrid=False, rangeslider_visible=False, showticklabels=True)
 
     if interval == "1d" and period in ["1mo", "6mo", "1y", "3y", "5y"]:
