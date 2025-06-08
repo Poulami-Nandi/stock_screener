@@ -31,7 +31,7 @@ def render_combined_chart(ticker):
         return
 
     hist.reset_index(inplace=True)
-    hist.rename(columns={"Datetime": "Date"}, inplace=True)  # Unify 'Date'
+    hist.rename(columns={"Datetime": "Date"}, inplace=True)
     hist["SMA_50"] = hist["Close"].rolling(window=50).mean()
     hist["SMA_200"] = hist["Close"].rolling(window=200).mean()
 
@@ -70,10 +70,14 @@ def render_combined_chart(ticker):
 
         df = hist.copy()
 
-        # Fetch EPS from yahooquery
         try:
             yq_stock = YQ_Ticker(ticker)
-            income_stmt = yq_stock.income_statement(frequency='q')
+            income_stmt_raw = yq_stock.income_statement(frequency='q')
+
+            if isinstance(income_stmt_raw, dict) and ticker in income_stmt_raw:
+                income_stmt = pd.DataFrame(income_stmt_raw[ticker])
+            else:
+                income_stmt = income_stmt_raw
 
             eps_df = income_stmt[['asOfDate', 'epsBasic']].dropna()
             eps_df.columns = ['Date', 'EPS']
@@ -122,7 +126,7 @@ def render_combined_chart(ticker):
             yaxis2=dict(title="PE", overlaying="y", side="right", showgrid=False)
         )
 
-    # X-axis formatting
+    # === X-axis cleanup ===
     xaxis_config = dict(title="Date", showgrid=False, rangeslider_visible=False, showticklabels=True)
 
     if interval == "1d" and period in ["1mo", "6mo", "1y", "3y", "5y"]:
