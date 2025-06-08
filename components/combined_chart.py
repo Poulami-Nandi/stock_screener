@@ -21,7 +21,6 @@ def render_combined_chart(ticker):
     st.subheader("📈 Stock Overview Chart")
 
     chart_mode = st.radio("Select Chart Mode", ["Price", "PE Ratio"], horizontal=True)
-
     selected_range = st.radio("Duration", list(TIMEFRAMES.keys()), horizontal=True, index=4)
     period, interval = TIMEFRAMES[selected_range]
 
@@ -32,9 +31,10 @@ def render_combined_chart(ticker):
         return
 
     hist.reset_index(inplace=True)
-    hist.rename(columns={"Datetime": "Date"}, inplace=True)
+    hist.rename(columns={"Datetime": "Date"}, inplace=True)  # Unify 'Date'
     hist["SMA_50"] = hist["Close"].rolling(window=50).mean()
     hist["SMA_200"] = hist["Close"].rolling(window=200).mean()
+
     fig = go.Figure()
 
     if chart_mode == "Price":
@@ -68,20 +68,22 @@ def render_combined_chart(ticker):
         show_pe = col2.checkbox("PE", value=True)
         show_median = col3.checkbox("Median PE", value=True)
 
-        df = hist.rename(columns={"Date": "Date"}).copy()
-        df["Date"] = pd.to_datetime(df["Date"])
+        df = hist.copy()
 
-        # Get real quarterly EPS from yahooquery
-        yq_stock = YQ_Ticker(ticker)
+        # Fetch EPS from yahooquery
         try:
-            income_stmt = yq_stock.income_statement(frequency='q')[ticker]
-            eps_df = pd.DataFrame(income_stmt)[['asOfDate', 'epsBasic']].dropna()
+            yq_stock = YQ_Ticker(ticker)
+            income_stmt = yq_stock.income_statement(frequency='q')
+
+            eps_df = income_stmt[['asOfDate', 'epsBasic']].dropna()
             eps_df.columns = ['Date', 'EPS']
             eps_df["Date"] = pd.to_datetime(eps_df["Date"])
             eps_df = eps_df.sort_values("Date")
             eps_df["TTM_EPS"] = eps_df["EPS"].rolling(window=4).sum()
+
             df = pd.merge_asof(df.sort_values("Date"), eps_df[['Date', 'TTM_EPS']], on="Date", direction="backward")
             df["PE"] = df["Close"] / df["TTM_EPS"]
+
         except Exception as e:
             st.error(f"Failed to load EPS data: {e}")
             return
@@ -120,7 +122,7 @@ def render_combined_chart(ticker):
             yaxis2=dict(title="PE", overlaying="y", side="right", showgrid=False)
         )
 
-    # === X-axis formatting and rangebreaks ===
+    # X-axis formatting
     xaxis_config = dict(title="Date", showgrid=False, rangeslider_visible=False, showticklabels=True)
 
     if interval == "1d" and period in ["1mo", "6mo", "1y", "3y", "5y"]:
